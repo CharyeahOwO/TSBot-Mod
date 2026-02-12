@@ -1,38 +1,36 @@
-# TSBot Mod — Minecraft × TeamSpeak 3 音乐点歌
+# TSBot Mod — Minecraft × TeamSpeak 3 跨平台点歌联动
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-1.20.1-brightgreen?style=flat-square&logo=minecraft" />
-  <img src="https://img.shields.io/badge/Forge-47.1.0-orange?style=flat-square" />
-  <img src="https://img.shields.io/badge/Java-17-blue?style=flat-square&logo=openjdk" />
-  <img src="https://img.shields.io/badge/License-All%20Rights%20Reserved-red?style=flat-square" />
+  <img src="https://img.shields.io/badge/Minecraft-1.20.1-brightgreen?style=flat-square&logo=minecraft" alt="Minecraft" />
+  <img src="https://img.shields.io/badge/Forge-47.1.0-orange?style=flat-square" alt="Forge" />
+  <img src="https://img.shields.io/badge/Java-17-blue?style=flat-square&logo=openjdk" alt="Java 17" />
+  <img src="https://img.shields.io/badge/License-All%20Rights%20Reserved-red?style=flat-square" alt="License" />
 </p>
 
-> **TSBot Mod** 是一个 Minecraft Forge 服务端 Mod，让玩家在游戏内通过聊天指令搜索、播放和控制 TeamSpeak 3 频道中的音乐机器人，实现 **MC 点歌 → TS3 放歌** 的跨平台联动体验。
+> **TSBot Mod** 是一个基于 Minecraft Forge 的服务端模组。它致力于打破游戏与语音软件的壁垒，让玩家在 MC 游戏内即可通过聊天指令，直接搜索、播放和控制 TeamSpeak 3 频道中的音乐机器人，实现「MC 点歌 → TS3 播放」的丝滑体验。
 
-  ### **注意**：该项目架构非常复杂，本人是有自己的需求才开发的，功能非常不完善，没有详细文档，该md文件由Cluade Opus 4.6 生成
+⚠️ **写在前面**：本项目最初为满足作者个人服务器需求而开发，内部架构较为复杂且功能仍在迭代中。部分极端场景下可能存在 Bug，欢迎通过 Issues 提交反馈或 PR 协助完善。
 
 ---
 
-## 💡 项目背景
+## 💡 项目背景与原理
 
-许多游戏社区同时使用 **Minecraft 服务器** 和 **TeamSpeak 3 语音频道**。借助 [TS3AudioBot](https://github.com/Splamy/TS3AudioBot) 及其优秀的音乐插件 [**TS3AudioBot-Plugin-Netease-QQ**](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ)，TS3 频道已经拥有了强大的点歌能力（支持网易云、QQ 音乐搜索/播放/歌单/FM 等）。
+许多硬核游戏社区习惯同时使用 Minecraft 服务器与 TeamSpeak 3 进行语音沟通。借助优秀的 [TS3AudioBot](https://github.com/Splamy/TS3AudioBot) 及其插件，TS3 频道本身已具备强大的点歌能力。
 
-但问题是：**玩家必须切换到 TS3 客户端才能点歌**，打断游戏体验。
+**痛点在于**：玩家每次点歌、切歌都必须 `Alt + Tab` 切换到 TS3 客户端，严重打断游戏沉浸感。
 
-**TSBot Mod 解决了这个问题** — 它作为 Minecraft 与 TS3 音乐机器人之间的桥梁，让玩家 **无需离开游戏界面**，直接在 MC 聊天栏搜索音乐、点击播放。指令通过 TS3 ServerQuery 协议透传给 TS3AudioBot 的 Netease-QQ 插件执行。
+**解决方案**：TSBot Mod 作为桥梁，将玩家在 MC 聊天栏内的指令，通过 TS3 ServerQuery 协议透传给 TS3AudioBot。玩家无需离开游戏界面，即可完成音乐的搜索与播放。
 
-```
-┌──────────────┐  聊天指令   ┌────────────┐  ServerQuery  ┌─────────────────────────┐
-│  MC 玩家     │ ─────────▶ │  TSBot Mod │ ────────────▶ │  TS3AudioBot            │
-│  /ts wyy     │            │  (本 Mod)  │               │  + Plugin-Netease-QQ    │
-│  search 晴天  │            │            │               │  (实际播放音乐)          │
-└──────────────┘            └─────┬──────┘               └─────────────────────────┘
-                                  │ HTTP
-                            ┌─────▼──────┐
-                            │ 音乐 API    │
-                            │ 网易云/QQ   │
-                            │ (搜索歌曲)  │
-                            └────────────┘
+### 核心工作流
+
+```mermaid
+graph LR
+    A[MC 玩家\n输入 /ts wyy search] -->|聊天指令| B(TSBot Mod\nMinecraft 服务端)
+    B -->|ServerQuery 协议| C[TS3AudioBot\n+ Netease-QQ 插件]
+    C -->|播放音频流| D((TS3 语音频道))
+    
+    B -.->|HTTP 请求\n获取搜索结果| E[(网易云 / QQ音乐 API)]
+    C -.->|解析播放链接| E
 ```
 
 ---
@@ -40,206 +38,121 @@
 ## ⚠️ 核心前置依赖
 
 > [!IMPORTANT]
-> 本 Mod **必须** 配合以下项目使用，请先完成它们的部署。
+> TSBot Mod 仅仅是指令的“搬运工”，实际的播放能力依赖以下项目，请**务必先行完成部署**。
 
-### 🎵 [TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) （最重要）
-
-由 [RayQuantum](https://github.com/RayQuantum) 开发的 TS3AudioBot 音乐插件，是本 Mod 的**播放核心**。TSBot Mod 发送的所有播放指令（`!wyy play`、`!qq play`、`!next`、`!pause` 等）最终都由该插件执行。
-
-该插件功能非常丰富：
-- ✅ 网易云音乐 / QQ 音乐 双平台播放
-- ✅ 歌曲点播、添加队列、下一首播放
-- ✅ 歌单、专辑批量播放
-- ✅ 6 种播放模式、FM 模式
-- ✅ 歌词显示、进度调节、音量控制
-- ✅ Cookie 登录支持 VIP 歌曲
-- ✅ 频道无人自动暂停
-
-**部署方式**: 参照其 [README](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ#安装方法)，推荐使用 Docker 部署。
-
-### 🤖 [TS3AudioBot](https://github.com/Splamy/TS3AudioBot)
-
-TeamSpeak 3 音频机器人框架，是上述插件的运行环境。
-
-### 🎶 音乐 API 服务
-
-| API | 项目 | 默认端口 | 用途 |
-|-----|------|----------|------|
-| 网易云音乐 | [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi) | 3000 | MC 端搜索 + TS3 端播放 |
-| QQ 音乐 | [jsososo/QQMusicApi](https://github.com/jsososo/QQMusicApi) | 3300 | MC 端搜索 + TS3 端播放 |
-
-这两个 API 同时被 **TSBot Mod**（用于搜索展示结果）和 **Plugin-Netease-QQ**（用于获取播放链接）使用。
+1. **[TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) （核心播放引擎）**
+   * 由 @RayQuantum 开发的优秀插件。支持双平台播放、VIP 歌曲登录、歌词与多种播放模式。
+   * **部署指北**：推荐使用 Docker 部署，详见其官方 README。
+2. **[TS3AudioBot](https://github.com/Splamy/TS3AudioBot)**
+   * TS3 音频机器人底层框架，上述插件的运行载体。
+3. **音乐 API 服务（双端共用）**
+   * [网易云音乐 API (默认端口 3000)](https://github.com/Binaryify/NeteaseCloudMusicApi)
+   * [QQ 音乐 API (默认端口 3300)](https://github.com/jsososo/QQMusicApi)
 
 ---
 
-## ✨ 功能
+## ✨ 功能特性
 
-| 功能 | 说明 |
-|------|------|
-| 🔍 **双平台搜索** | 网易云 + QQ 音乐关键词搜索，结果在游戏内展示 |
-| ▶️ **可点击播放** | 搜索结果带 **[播放]** / **[入队]** 交互按钮 |
-| 📋 **播放队列** | 支持"立即播放"和"加入队列"两种模式 |
-| ⏭ **切歌 / 暂停** | `/ts next` 切歌、`/ts pause` 暂停/继续 |
-| 📢 **全服广播** | 播放/入队/切歌时全服通知，显示歌名和操作者 |
-| ⚙️ **自动配置** | 首次启动自动生成 `tsbot-config.toml` 并提醒填写 |
-| 🔓 **全员可用** | 无需 OP 权限，所有玩家均可使用 |
+* 🔍 **双源搜索**：支持网易云 / QQ 音乐关键词搜索，结果在 MC 聊天栏以交互式文本展示。
+* ▶️ **快捷交互**：搜索结果自带 `[播放]` 与 `[入队]` 悬浮按钮，点击即播。
+* ⏭ **基础控制**：支持 `/ts next` (切歌) 与 `/ts pause` (暂停/继续)。
+* 📢 **全服广播**：玩家点歌、切歌时，触发全服动态通知（包含操作者与歌名），氛围感拉满。
+* ⚙️ **开箱即用**：首次启动自动生成带注释的 `tsbot-config.toml`。
+* 🔓 **无权限门槛**：无需 OP 权限，全体在线玩家均可使用。
 
 ---
 
-## 🚀 快速开始
+## 🚀 部署指南 (服主向)
 
-### 前置要求
+### 1. 安装 Mod
+前往 [Releases](https://github.com/CharyeahOwO/TSBot-Mod/releases) 下载最新版 `tsbotmod-x.x.x.jar`，放入 Minecraft 服务端的 `mods/` 文件夹并启动一次服务器。
 
-- [x] Minecraft Forge 1.20.1 服务端
-- [x] 运行中的 TeamSpeak 3 服务器
-- [x] 已部署 [TS3AudioBot](https://github.com/Splamy/TS3AudioBot) + [Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ)
-- [x] 运行中的网易云音乐 API 和/或 QQ 音乐 API
-- [x] JDK 17（用于构建）
-
-### 1. 安装
-
-从 [Releases](https://github.com/CharyeahOwO/TSBot-Mod/releases) 下载最新的 `tsbotmod-1.0.0.jar`，放入 MC 服务端的 `mods/` 目录。
-
-### 2. 配置
-
-首次启动后自动生成 `config/tsbot-config.toml`，按需修改：
+### 2. 修改配置
+服务器启动后会生成 `config/tsbot-config.toml` 文件，请根据实际情况配置：
 
 ```toml
 [General]
-# TS3 ServerQuery 连接
-host = "your-ts3-server.com"      # TS3 服务器地址
-port = 10011                       # ServerQuery 端口
-user = "serveradmin"
-password = "YOUR_SERVERQUERY_PASSWORD"
+# TS3 ServerQuery 连接信息
+host = "your-ts3-server.com"       # TS3 服务器 IP/域名
+port = 10011                       # ServerQuery 端口 (默认 10011)
+user = "serveradmin"               # 管理员账号
+password = "YOUR_PASSWORD"         # ⚠️ 注意：这是 Query 密码，非频道密码！
 
-# 默认音乐源
+# 默认音乐源 (wyy 或 qq)
 default_source = "wyy"
 
-# 音乐搜索 API 地址
-netease_api = "http://your-host:3000"
-qq_api = "http://your-host:3300"
+# 音乐 API 地址 (需包含 http:// 且不带尾斜杠)
+netease_api = "[http://127.0.0.1:3000](http://127.0.0.1:3000)"
+qq_api = "[http://127.0.0.1:3300](http://127.0.0.1:3300)"
 ```
 
-> [!WARNING]
-> **ServerQuery 密码**不是 TS3 服务器连接密码！它是 TS3 服务端首次启动时自动生成的管理接口密码，可在 TS3 服务端日志中找到。
-
-### 3. 启动验证
-
-重启 MC 服务端，控制台应输出：
-
-```
+### 3. 验证连接
+保存配置后重启服务端，若控制台输出以下内容，则代表连接成功：
+```log
 [TSBotMod] TSBotMod V2.0 已加载，等待服务器指令。
-[TSBotMod]   TS3 服务器: your-ts3-server.com:10011
-[TSBotMod]   网易云 API: http://your-host:3000
-[TSBotMod]   QQ音乐 API: http://your-host:3300
+[TSBotMod]   TS3 服务器连接就绪...
+[TSBotMod]   网易云 API: 正常接入
+[TSBotMod]   QQ音乐 API: 正常接入
 ```
 
-### 4. 从源码构建
+---
+
+## 🛠️ 从源码构建 (开发者向)
+
+环境要求：**JDK 17** (必须)
 
 ```bash
-git clone https://github.com/CharyeahOwO/TSBot-Mod.git
+git clone [https://github.com/CharyeahOwO/TSBot-Mod.git](https://github.com/CharyeahOwO/TSBot-Mod.git)
 cd TSBot-Mod
+# Linux / macOS
 JAVA_HOME=/path/to/jdk17 ./gradlew build
-# 产物: build/libs/tsbotmod-1.0.0.jar
+# Windows
+gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 ```
+构建产物位于 `build/libs/` 目录下。
 
-> [!NOTE]
-> 必须使用 JDK 17 构建，JDK 21 会报 `Unsupported class file major version 65` 错误。
+> [!WARNING]
+> 切勿使用 JDK 21 或更高版本进行编译，否则会导致 Forge 加载时抛出 `Unsupported class file major version 65` 异常。
 
 ---
 
-## 📖 指令参考
+## 📖 指令参考词典
 
-| 指令 | 说明 | 示例 |
-|------|------|------|
+| 指令语法 | 功能说明 | 使用示例 |
+| :--- | :--- | :--- |
 | `/ts wyy search <关键词>` | 搜索网易云音乐 | `/ts wyy search 晴天` |
 | `/ts qq search <关键词>` | 搜索 QQ 音乐 | `/ts qq search 七里香` |
-| `/ts wyy play <ID>` | 播放网易云歌曲 | 点击搜索结果的 **[播放]** |
-| `/ts wyy add <ID>` | 加入播放队列 | 点击搜索结果的 **[入队]** |
-| `/ts qq play <ID>` | 播放 QQ 歌曲 | 点击搜索结果的 **[播放]** |
-| `/ts qq add <ID>` | 加入播放队列 | 点击搜索结果的 **[入队]** |
+| `/ts wyy play <ID>` | 立即播放 (网易云) | 直接点击搜索结果的 `[播放]` |
+| `/ts wyy add <ID>` | 加入队列 (网易云) | 直接点击搜索结果的 `[入队]` |
 | `/ts next` | 切换下一首 | `/ts next` |
-| `/ts pause` | 暂停 / 继续 | `/ts pause` |
+| `/ts pause` | 暂停 / 继续播放 | `/ts pause` |
 
-> 搜索结果以可交互消息展示，带有可点击的 [播放] 和 [入队] 按钮，鼠标悬停显示歌曲信息。   
-> 上述指令最终通过 ServerQuery 转为 `!wyy play`、`!qq play` 等命令发送给 [Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) 执行。
-
----
-
-## 🏗️ 技术架构
-
-### 模块概览
-
-| 类名 | 职责 |
-|------|------|
-| `TSBotMod` | Forge Mod 入口，Brigadier 命令树注册，搜索/播放/控制逻辑 |
-| `MusicSearchService` | 异步 HTTP 搜索（`CompletableFuture`），调用网易云 / QQ 音乐 API |
-| `MusicSearchResult` | 搜索结果数据类（ID、歌名、歌手、展示名） |
-| `PlayQueue` | 播放队列管理，区分"立即播放"与"入队"，全服广播通知 |
-| `TS3QueryClient` | TS3 ServerQuery 协议实现（Banner 消耗、键值对认证、TS3 转义） |
-| `TSBotConfigLoader` | 配置加载 & 自动生成，空值保护，URL 清理 |
-| `TSBotConfig` | 配置数据类 |
-
-### 工作流程
-
-1. 玩家在 MC 中执行 `/ts wyy search 晴天`
-2. `MusicSearchService` 异步调用网易云 API 搜索，解析 JSON 结果
-3. 搜索结果以可交互消息展示给玩家（带 [播放] / [入队] 按钮）
-4. 玩家点击按钮 → 触发 `/ts wyy play <ID> <歌名>` 命令
-5. `TS3QueryClient` 通过 ServerQuery 协议连接 TS3 服务器
-6. 发送 `!wyy play <ID>` 指令给 TS3AudioBot（由 Plugin-Netease-QQ 执行播放）
-7. `PlayQueue` 向全服广播播放通知
-
-### 设计要点
-
-- **完全异步**: 所有网络操作使用 `CompletableFuture`，不阻塞 MC 主线程
-- **TS3 协议兼容**: 完整实现 ServerQuery 转义规则、Welcome Banner 消耗、键值对认证
-- **健壮的错误处理**: 连接超时 / 认证失败 / 空配置等场景均有明确的用户反馈
+*注：上述 MC 指令在后台会被解析为 `!wyy play` 等原生 TS3 机器人指令，并通过 ServerQuery 发送执行。*
 
 ---
 
-## 📁 项目结构
+## 🐛 常见排错指南
 
-```
-TSBot-Mod/
-├── build.gradle                          # Gradle 构建配置
-├── gradle.properties                     # Mod 元数据 & 版本
-├── config/
-│   └── tsbot-config.toml                 # 配置模板
-└── src/main/java/com/example/tsbotmod/
-    ├── TSBotMod.java                     # Mod 入口 & 命令注册
-    ├── TSBotConfig.java                  # 配置数据类
-    ├── TSBotConfigLoader.java            # 配置加载与自动生成
-    ├── MusicSearchService.java           # 音乐 API 搜索客户端
-    ├── MusicSearchResult.java            # 搜索结果数据类
-    ├── PlayQueue.java                    # 播放队列 & 全服广播
-    └── TS3QueryClient.java              # TS3 ServerQuery 客户端
-```
-
----
-
-## 🐛 常见问题
-
-| 问题 | 解决方案 |
-|------|----------|
-| 构建报错 `Unsupported class file major version 65` | 使用 JDK 17，不支持 JDK 21 |
-| TS3 报 `invalid loginname or password` | 检查 `password` 是否为 ServerQuery 密码 |
-| 搜索成功但播放无声 | 确认 TS3AudioBot + Plugin-Netease-QQ 已正常运行 |
-| QQ 音乐搜索返回空 | 检查 QQ 音乐 API 容器是否正常（`curl http://host:3300/search?key=周杰伦`） |
+* **Q: 为什么 TS3 日志疯狂报错 `invalid loginname or password`？**
+  * A: 配置文件里的 `password` 填错了。ServerQuery 密码是在 TS3 服务端**首次初始化**时生成在控制台的，如果你忘记了，可能需要重置 TS3 服务端的数据库或者使用相关脚本重新生成。
+* **Q: 搜索功能正常，点击播放没反应/没声音？**
+  * A: 本 Mod 只负责发送指令。请检查你部署的 TS3AudioBot 以及 Netease-QQ 插件是否正常工作，机器人是否在你的频道里，以及机器人本身是否有播放权限。
+* **Q: QQ 音乐搜索结果一直为空？**
+  * A: 请检查你的 QQ 音乐 API 容器状态，可以在服务器后台用 `curl http://你的IP:3300/search?key=测试` 看看有没有 JSON 数据返回。
 
 ---
 
 ## 🙏 致谢
 
-本项目的实现离不开以下优秀的开源项目：
+本项目的实现站在了巨人的肩膀上，特别感谢以下开源项目与社区：
 
-- ⭐ [**TS3AudioBot-Plugin-Netease-QQ**](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) by [RayQuantum](https://github.com/RayQuantum) — 核心前置插件，为 TS3AudioBot 提供网易云 / QQ 音乐播放能力
-- [Splamy/TS3AudioBot](https://github.com/Splamy/TS3AudioBot) — TeamSpeak 3 音频机器人框架
-- [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi) — 网易云音乐 API
-- [jsososo/QQMusicApi](https://github.com/jsososo/QQMusicApi) — QQ 音乐 API
-- [Minecraft Forge](https://minecraftforge.net/) — Mod 加载框架
-- [Google Gson](https://github.com/google/gson) — JSON 解析库
-- Cluade Code Opus 4.6 生成的AI文档，有问题提交ISSUS
+- 🌟 [TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) (by @RayQuantum) — 提供了核心的播放解析能力。
+- [Splamy/TS3AudioBot](https://github.com/Splamy/TS3AudioBot)
+- [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
+- [jsososo/QQMusicApi](https://github.com/jsososo/QQMusicApi)
+- [Minecraft Forge](https://minecraftforge.net/) 
+
+*(本 README 初稿由 Claude Opus 4.6 生成并经人工润色校对，如有问题欢迎提交 Issues)*
 
 ---
 
