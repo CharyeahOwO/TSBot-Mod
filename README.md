@@ -19,21 +19,33 @@
 
 **痛点在于**：玩家每次点歌、切歌都必须 `Alt + Tab` 切换到 TS3 客户端，严重打断游戏沉浸感。
 
-**解决方案**：TSBot Mod 作为桥梁，将玩家在 MC 聊天栏内的指令，通过 TS3 ServerQuery 协议透传给 TS3AudioBot。玩家无需离开游戏界面，即可完成音乐的搜索与播放。
+**解决方案**：TSBot Mod 作为桥梁，将玩家在 MC 聊天栏内的交互，精准分发给音乐 API（获取数据）或 TS3 ServerQuery（执行播放），玩家完全无需离开游戏界面。
 
 ### 核心工作流
 
 > [!WARNING]
-> **⚠️ 使用该模组前必须完全理解以下架构：**
+> **⚠️ 使用该模组前必须完全理解以下架构逻辑：**
+
+本模组在底层将指令分为**“搜索点歌”**与**“基础控制”**两条独立的数据链路：
 
 ```mermaid
-graph LR
-    A[MC 玩家\n输入 /ts wyy search] -->|聊天指令| B(TSBot Mod\nMinecraft 服务端)
-    B -->|ServerQuery 协议| C[TS3AudioBot\n+ Netease-QQ 插件]
-    C -->|播放音频流| D((TS3 语音频道))
-    
-    B -.->|HTTP 请求\n获取搜索结果| E[(网易云 / QQ音乐 API)]
-    C -.->|解析播放链接| E
+sequenceDiagram
+    actor Player as MC 玩家
+    participant Mod as TSBot Mod (服务端)
+    participant API as 音乐 API (网易云/QQ)
+    participant TS3 as TS3AudioBot
+
+    Note over Player, TS3: 链路一：搜索与点歌流程
+    Player->>Mod: 输入 /ts qq/wyy search xxx
+    Mod->>API: [异步] 调用 HTTP 接口搜索
+    API-->>Mod: 返回 JSON 搜索结果
+    Mod-->>Player: 游戏内展示搜索结果列表
+    Player->>Mod: 点击聊天栏的 [播放] 按钮
+    Mod->>TS3: 通过 ServerQuery 转换为 !wyy/qq play xxx 指令
+
+    Note over Player, TS3: 链路二：控制流程 (完全不经过音乐 API)
+    Player->>Mod: 输入 /ts pause 或 /ts next
+    Mod->>TS3: 通过 ServerQuery 直接发送 !pause / !next 指令
 ```
 
 ---
@@ -42,18 +54,19 @@ graph LR
 
 ### 💡 核心设计亮点
 
-* **🚀 完全异步 (Non-blocking)**：这是本 Mod 最核心的性能保障。所有涉及网络 I/O 的操作（如请求音乐 API 搜索结果）全部采用 `CompletableFuture` 异步执行，**绝不阻塞 Minecraft 主线程**，即使 API 响应慢也完全不会影响服务器的 TPS。
-* **🔌 TS3 协议深度兼容**：并没有依赖臃肿的第三方库，而是从底层完整实现了 ServerQuery 的转义规则、Welcome Banner 消耗机制以及严格的键值对认证流程。
-* **🛡️ 健壮的容错机制**：针对连接超时、认证失败、API 宕机或空配置等异常场景，均做了完备的异常捕获与处理，并会在游戏内给玩家明确的友好反馈提示。
+* **🚀 完全异步 (Non-blocking)**：这是本 Mod 最核心的性能保障。所有涉及调用音乐 API 的网络 I/O 操作，全部采用 `CompletableFuture` 异步执行，**绝不阻塞 Minecraft 主线程**，即使 API 响应慢也完全不会拉低服务器的 TPS。
+* **🔌 极简的控制流**：如上图所示，对于单纯的控制指令（如切歌、暂停），模组会直接通过 ServerQuery 与 TS3 通信，避免了多余的 API 请求开销。
+* **⚙️ TS3 协议深度兼容**：没有依赖臃肿的第三方库，而是从底层完整实现了 ServerQuery 的转义规则、Welcome Banner 消耗机制以及严格的键值对认证流程。
+* **🛡️ 健壮的容错机制**：针对连接超时、认证失败、API 宕机或空配置等异常场景，均做了完备的异常捕获，并会在游戏内给玩家明确的报错反馈。
 
 ### 模块概览
 
 | 核心类名 | 核心职责 |
 | :--- | :--- |
-| `TSBotMod` | Forge Mod 入口，Brigadier 命令树注册，搜索/播放/控制逻辑入口 |
-| `MusicSearchService` | 异步 HTTP 搜索实现，负责调用网易云 / QQ 音乐 API 并解析 JSON |
+| `TSBotMod` | Forge Mod 入口，Brigadier 命令树注册，接收玩家指令 |
+| `MusicSearchService` | 异步 HTTP 搜索实现，负责调用网易云 / QQ 音乐 API 并解析结果 |
 | `PlayQueue` | 播放队列管理，区分“立即播放”与“入队”，并负责向全服广播通知 |
-| `TS3QueryClient` | TS3 ServerQuery 协议底层客户端实现 |
+| `TS3QueryClient` | TS3 ServerQuery 协议底层客户端实现，负责发送 `!play` / `!next` 等指令 |
 
 ---
 
@@ -149,35 +162,4 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 | `/ts next` | 切换下一首 | `/ts next` |
 | `/ts pause` | 暂停 / 继续播放 | `/ts pause` |
 
-*注：上述 MC 指令在后台会被解析为 `!wyy play` 等原生 TS3 机器人指令，并通过 ServerQuery 发送执行。*
-
----
-
-## 🐛 常见排错指南
-
-* **Q: 为什么 TS3 日志疯狂报错 `invalid loginname or password`？**
-  * A: 配置文件里的 `password` 填错了。ServerQuery 密码是在 TS3 服务端**首次初始化**时生成在控制台的，如果你忘记了，可能需要重置 TS3 服务端的数据库或者使用相关脚本重新生成。
-* **Q: 搜索功能正常，点击播放没反应/没声音？**
-  * A: 本 Mod 只负责发送指令。请检查你部署的 TS3AudioBot 以及 Netease-QQ 插件是否正常工作，机器人是否在你的频道里，以及机器人本身是否有播放权限。
-* **Q: QQ 音乐搜索结果一直为空？**
-  * A: 请检查你的 QQ 音乐 API 容器状态，可以在服务器后台用 `curl http://你的IP:3300/search?key=测试` 看看有没有 JSON 数据返回。
-
----
-
-## 🙏 致谢
-
-本项目的实现站在了巨人的肩膀上，特别感谢以下开源项目与社区：
-
-- 🌟 [TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) (by @RayQuantum) — 提供了核心的播放解析能力。
-- [Splamy/TS3AudioBot](https://github.com/Splamy/TS3AudioBot)
-- [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
-- [jsososo/QQMusicApi](https://github.com/jsososo/QQMusicApi)
-- [Minecraft Forge](https://minecraftforge.net/) 
-
-*(本 README 初稿由 Claude Opus 4.6 生成并经人工润色校对，如有问题欢迎提交 Issues)*
-
----
-
-## 📄 License
-
-All Rights Reserved. See [LICENSE.txt](LICENSE.txt).
+*注：上述
