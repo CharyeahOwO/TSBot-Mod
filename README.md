@@ -162,4 +162,35 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 | `/ts next` | 切换下一首 | `/ts next` |
 | `/ts pause` | 暂停 / 继续播放 | `/ts pause` |
 
-*注：上述
+*注：上述 MC 指令在后台会被解析为 `!wyy play` 等原生 TS3 机器人指令，并通过 ServerQuery 发送执行。*
+
+---
+
+## 🐛 常见排错指南
+
+* **Q: 为什么 TS3 日志疯狂报错 `invalid loginname or password`？**
+  * A: 配置文件里的 `password` 填错了。ServerQuery 密码是在 TS3 服务端**首次初始化**时生成在控制台的，如果你忘记了，可能需要重置 TS3 服务端的数据库或者使用相关脚本重新生成。
+* **Q: 搜索功能正常，点击播放没反应/没声音？**
+  * A: 本 Mod 只负责发送指令。请检查你部署的 TS3AudioBot 以及 Netease-QQ 插件是否正常工作，机器人是否在你的频道里，以及机器人本身是否有播放权限。
+* **Q: QQ 音乐搜索结果一直为空？**
+  * A: 请检查你的 QQ 音乐 API 容器状态，可以在服务器后台用 `curl http://你的IP:3300/search?key=测试` 看看有没有 JSON 数据返回。
+
+---
+
+## 🙏 致谢
+
+本项目的实现站在了巨人的肩膀上，特别感谢以下开源项目与社区：
+
+- 🌟 [TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) (by @RayQuantum) — 提供了核心的播放解析能力。
+- [Splamy/TS3AudioBot](https://github.com/Splamy/TS3AudioBot)
+- [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
+- [jsososo/QQMusicApi](https://github.com/jsososo/QQMusicApi)
+- [Minecraft Forge](https://minecraftforge.net/) 
+
+*(本 README 初稿由 Claude Opus 4.6 生成并经人工润色校对，如有问题欢迎提交 Issues)*
+
+---
+
+## 📄 License
+
+All Rights Reserved. See [LICENSE.txt](LICENSE.txt).
