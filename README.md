@@ -237,6 +237,7 @@ TSBot-Mod/
 - [jsososo/QQMusicApi](https://github.com/jsososo/QQMusicApi) — QQ 音乐 API
 - [Minecraft Forge](https://minecraftforge.net/) — Mod 加载框架
 - [Google Gson](https://github.com/google/gson) — JSON 解析库
+- Cluad Code Opus 4.6 生成的AI文档，有问题提交ISSUS
 
 ---
 
