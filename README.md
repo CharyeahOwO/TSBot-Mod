@@ -16,8 +16,13 @@
 ## 🔔 核心前置依赖 (部署前必看)
 
 > [!IMPORTANT]
-> **本模组本质上是作为以下项目的“MC 侧扩展控制端”而存在的，仅仅是指令的“搬运工”。在使用本模组前，请务必确保你已经成功部署了以下所有服务，否则本模组将没有任何实际作用。**
+> **本模组本质上是作为以下项目的“MC 侧扩展控制端”而存在的，仅仅是指令的“搬运工”。在使用本模组前，请务必确保你已经完全满足以下条件，否则本模组将没有任何实际作用。**
 
+### 🚫 避坑警告：关于 TS3 服务器的硬性要求
+本模组强依赖 TeamSpeak 3 的 **ServerQuery 端口（默认 10011）** 以及具有相应执行权限的账号（如 `serveradmin`）。
+**如果你使用的是从淘宝等渠道购买的廉价合租服、频道服，通常商家不会开放 ServerQuery 权限，这种情况下本模组绝对无法使用！** 请确保你拥有 TS3 服务器的完整底层控制权（推荐使用独立 VPS 自行搭建 TS3 服务端）。
+
+### 🛠️ 必须部署的前置服务
 1. **核心播放引擎：[TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ)**
    * 由 @RayQuantum 开发的优秀 TS3 音乐插件。支持网易云/QQ音乐双平台播放、VIP 歌曲登录、歌词与多种播放模式。
    * TSBot Mod 发送的所有播放指令（如 `!wyy play` 等），最终均由该插件在 TeamSpeak 3 端负责实际执行。
@@ -100,7 +105,7 @@ sequenceDiagram
 
 ## 🚀 部署指南 (服主向)
 
-> **前置确认**：请确保已跑通上述【核心前置依赖】中的所有服务，再进行本模组的安装。
+> **前置确认**：请确保已跑通上述【核心前置依赖】中的所有服务，并且**拥有 TS3 的 ServerQuery 权限**，再进行本模组的安装。
 
 ### 1. 安装 Mod
 前往 [Releases](https://github.com/CharyeahOwO/TSBot-Mod/releases) 下载最新版 `tsbotmod-x.x.x.jar`，放入 Minecraft 服务端的 `mods/` 文件夹并启动一次服务器。
@@ -171,6 +176,8 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 
 ## 🐛 常见排错指南
 
+* **Q: 为什么控制台报错无法连接到 ServerQuery 或连不上 10011 端口？**
+  * A: 首先检查你的 TS3 服务器防火墙/安全组是否放行了 10011 (TCP) 端口。其次，**如果你用的是淘宝买的几十块钱的合租 TS3 频道服，商家是不会给你 ServerQuery 权限和端口的，此情况无解，请自行租用 VPS 搭建 TS3。**
 * **Q: 为什么 TS3 日志疯狂报错 `invalid loginname or password`？**
   * A: 配置文件里的 `password` 填错了。ServerQuery 密码是在 TS3 服务端**首次初始化**时生成在控制台的，如果你忘记了，可能需要重置 TS3 服务端的数据库或者使用相关脚本重新生成。
 * **Q: 搜索功能正常，点击播放没反应/没声音？**
