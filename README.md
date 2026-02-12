@@ -23,6 +23,9 @@
 
 ### 核心工作流
 
+> [!WARNING]
+> **⚠️ 使用该模组前必须完全理解以下架构：**
+
 ```mermaid
 graph LR
     A[MC 玩家\n输入 /ts wyy search] -->|聊天指令| B(TSBot Mod\nMinecraft 服务端)
