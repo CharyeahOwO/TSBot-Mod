@@ -1,0 +1,34 @@
+# .gitignore for Minecraft Forge Mods
+
+# Build Outputs
+build/
+bin/
+out/
+.gradle/
+.idea/
+.settings/
+.vscode/
+run/
+run-data/
+logs/
+
+# Secrets & Configs (用户需手动创建)
+# config/tsbot-config.toml 已提供模板，不排除
+
+# IDE
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+
+# OS
+*.DS_Store
+Thumbs.db
+
+# Temp Files
+*.log
+*.swp
+
+# Archives (不需要上传原始 MDK zip)
+*.zip

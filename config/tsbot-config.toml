@@ -1,0 +1,16 @@
+# TSBot 配置文件
+# 由 TSBotMod V2.0 自动生成，请根据你的环境修改下列参数。
+
+[General]
+# TS3 语音服务器地址 (远程 IP)
+host = "localhost"
+port = 10011
+user = "serveradmin"
+password = "YOUR_SERVERQUERY_PASSWORD"
+
+# 默认音乐源：wyy 或 qq
+default_source = "wyy"
+
+# 音乐 API 地址 (请填入 Docker 宿主机 IP，不要填 localhost)
+netease_api = "http://localhost:3000"
+qq_api = "http://localhost:3300"

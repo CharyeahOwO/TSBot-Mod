@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven {
+            name = 'MinecraftForge'
+            url = 'https://maven.minecraftforge.net/'
+        }
+    }
+}
+
+// 原 MDK 使用 foojay-resolver-convention 来自动解析 JDK 版本。
+// 由于在当前网络环境下无法从插件仓库解析该插件，这里将其移除，
+// 直接使用本机已配置好的 JAVA_HOME (Java 17) 进行构建。
