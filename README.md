@@ -9,13 +9,30 @@
 
 > **TSBot Mod** 是一个基于 Minecraft Forge 的服务端模组。它致力于打破游戏与语音软件的壁垒，让玩家在 MC 游戏内即可通过聊天指令，直接搜索、播放和控制 TeamSpeak 3 频道中的音乐机器人，实现「MC 点歌 → TS3 播放」的丝滑体验。
 
-⚠️ **写在前面**：本项目最初为满足作者个人服务器需求而开发，内部架构较为复杂且功能仍在迭代中。部分极端场景下可能存在 Bug，欢迎通过 Issues 提交反馈或 PR 协助完善。
+⚠️ **免责提醒**：本项目最初为满足作者个人服务器需求而开发，内部架构较为复杂且功能仍在迭代中。部分极端场景下可能存在 Bug，欢迎通过 Issues 提交反馈或 PR 协助完善。
+
+---
+
+## 🔔 核心前置依赖 (部署前必看)
+
+> [!IMPORTANT]
+> **本模组本质上是作为以下项目的“MC 侧扩展控制端”而存在的，仅仅是指令的“搬运工”。在使用本模组前，请务必确保你已经成功部署了以下所有服务，否则本模组将没有任何实际作用。**
+
+1. **核心播放引擎：[TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ)**
+   * 由 @RayQuantum 开发的优秀 TS3 音乐插件。支持网易云/QQ音乐双平台播放、VIP 歌曲登录、歌词与多种播放模式。
+   * TSBot Mod 发送的所有播放指令（如 `!wyy play` 等），最终均由该插件在 TeamSpeak 3 端负责实际执行。
+   * **部署建议**：推荐使用 Docker 部署，详见其官方 README。
+2. **底层机器人框架：[TS3AudioBot](https://github.com/Splamy/TS3AudioBot)**
+   * TeamSpeak 3 音频机器人底层运行载体。
+3. **音乐 API 服务（双端共用）**
+   * [网易云音乐 API (默认端口 3000)](https://github.com/Binaryify/NeteaseCloudMusicApi)
+   * [QQ 音乐 API (默认端口 3300)](https://github.com/jsososo/QQMusicApi)
 
 ---
 
 ## 💡 项目背景与原理
 
-许多硬核游戏社区习惯同时使用 Minecraft 服务器与 TeamSpeak 3 进行语音沟通。借助优秀的 [TS3AudioBot](https://github.com/Splamy/TS3AudioBot) 及其插件，TS3 频道本身已具备强大的点歌能力。
+许多硬核游戏社区习惯同时使用 Minecraft 服务器与 TeamSpeak 3 进行语音沟通。借助上述的 TS3 插件，频道本身已具备强大的点歌能力。
 
 **痛点在于**：玩家每次点歌、切歌都必须 `Alt + Tab` 切换到 TS3 客户端，严重打断游戏沉浸感。
 
@@ -70,22 +87,6 @@ sequenceDiagram
 
 ---
 
-## ⚠️ 核心前置依赖
-
-> [!IMPORTANT]
-> TSBot Mod 仅仅是指令的“搬运工”，实际的播放能力依赖以下项目，请**务必先行完成部署**。
-
-1. **[TS3AudioBot-Plugin-Netease-QQ](https://github.com/RayQuantum/TS3AudioBot-Plugin-Netease-QQ) （核心播放引擎）**
-   * 由 @RayQuantum 开发的优秀插件。支持双平台播放、VIP 歌曲登录、歌词与多种播放模式。
-   * **部署指北**：推荐使用 Docker 部署，详见其官方 README。
-2. **[TS3AudioBot](https://github.com/Splamy/TS3AudioBot)**
-   * TS3 音频机器人底层框架，上述插件的运行载体。
-3. **音乐 API 服务（双端共用）**
-   * [网易云音乐 API (默认端口 3000)](https://github.com/Binaryify/NeteaseCloudMusicApi)
-   * [QQ 音乐 API (默认端口 3300)](https://github.com/jsososo/QQMusicApi)
-
----
-
 ## ✨ 功能特性
 
 * 🔍 **双源搜索**：支持网易云 / QQ 音乐关键词搜索，结果在 MC 聊天栏以交互式文本展示。
@@ -98,6 +99,8 @@ sequenceDiagram
 ---
 
 ## 🚀 部署指南 (服主向)
+
+> **前置确认**：请确保已跑通上述【核心前置依赖】中的所有服务，再进行本模组的安装。
 
 ### 1. 安装 Mod
 前往 [Releases](https://github.com/CharyeahOwO/TSBot-Mod/releases) 下载最新版 `tsbotmod-x.x.x.jar`，放入 Minecraft 服务端的 `mods/` 文件夹并启动一次服务器。
