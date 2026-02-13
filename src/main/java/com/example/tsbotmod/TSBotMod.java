@@ -22,20 +22,6 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * TSBot V2.0 服务器端模组入口。
- * 提供 /ts 指令，通过搜索+交互控制 TS3 音乐机器人。
- *
- * 指令树：
- *   /ts wyy search <关键词>  - 搜索网易云音乐
- *   /ts qq search <关键词>   - 搜索 QQ 音乐
- *   /ts wyy play <ID>       - 直接播放（网易云）
- *   /ts wyy add <ID>        - 加入队列（网易云）
- *   /ts qq play <ID>        - 直接播放（QQ）
- *   /ts qq add <ID>         - 加入队列（QQ）
- *   /ts next                - 切歌
- *   /ts pause               - 暂停/继续
- */
 @Mod(TSBotMod.MODID)
 public class TSBotMod {
     public static final String MODID = "tsbotmod";
@@ -49,7 +35,6 @@ public class TSBotMod {
         playQueue = new PlayQueue(ts3Client);
         MinecraftForge.EVENT_BUS.register(this);
 
-        // 启动时打印关键配置，方便确认 API 地址是否正确
         TSBotConfig config = TSBotConfigLoader.getConfig();
         LOGGER.info("TSBotMod V2.0 已加载，等待服务器指令。");
         LOGGER.info("  TS3 服务器: {}:{}", config.host, config.port);
@@ -66,11 +51,7 @@ public class TSBotMod {
 
     private LiteralArgumentBuilder<CommandSourceStack> buildRootCommand() {
         return Commands.literal("ts")
-                // ===== 不设置 .requires()，所有玩家可用 =====
-
-                // /ts wyy ...
                 .then(Commands.literal("wyy")
-                        // /ts wyy search <关键词>
                         .then(Commands.literal("search")
                                 .then(Commands.argument("keyword", StringArgumentType.greedyString())
                                         .executes(ctx -> {
@@ -78,7 +59,6 @@ public class TSBotMod {
                                             handleSearch(ctx.getSource(), "wyy", keyword);
                                             return 1;
                                         })))
-                        // /ts wyy play <ID>
                         .then(Commands.literal("play")
                                 .then(Commands.argument("id", StringArgumentType.greedyString())
                                         .executes(ctx -> {
@@ -86,7 +66,6 @@ public class TSBotMod {
                                             handlePlay(ctx.getSource(), "wyy", id);
                                             return 1;
                                         })))
-                        // /ts wyy add <ID>
                         .then(Commands.literal("add")
                                 .then(Commands.argument("id", StringArgumentType.greedyString())
                                         .executes(ctx -> {
@@ -95,9 +74,7 @@ public class TSBotMod {
                                             return 1;
                                         }))))
 
-                // /ts qq ...
                 .then(Commands.literal("qq")
-                        // /ts qq search <关键词>
                         .then(Commands.literal("search")
                                 .then(Commands.argument("keyword", StringArgumentType.greedyString())
                                         .executes(ctx -> {
@@ -105,7 +82,6 @@ public class TSBotMod {
                                             handleSearch(ctx.getSource(), "qq", keyword);
                                             return 1;
                                         })))
-                        // /ts qq play <ID>
                         .then(Commands.literal("play")
                                 .then(Commands.argument("id", StringArgumentType.greedyString())
                                         .executes(ctx -> {
@@ -113,7 +89,6 @@ public class TSBotMod {
                                             handlePlay(ctx.getSource(), "qq", id);
                                             return 1;
                                         })))
-                        // /ts qq add <ID>
                         .then(Commands.literal("add")
                                 .then(Commands.argument("id", StringArgumentType.greedyString())
                                         .executes(ctx -> {
@@ -122,14 +97,12 @@ public class TSBotMod {
                                             return 1;
                                         }))))
 
-                // /ts next - 切歌
                 .then(Commands.literal("next")
                         .executes(ctx -> {
                             handleNext(ctx.getSource());
                             return 1;
                         }))
 
-                // /ts pause - 暂停/继续
                 .then(Commands.literal("pause")
                         .executes(ctx -> {
                             handlePause(ctx.getSource());
@@ -137,11 +110,6 @@ public class TSBotMod {
                         }));
     }
 
-    // ==================== 搜索逻辑 ====================
-
-    /**
-     * 处理搜索请求：异步调用 API，返回可点击的交互列表。
-     */
     private void handleSearch(CommandSourceStack source, String platform, String keyword) {
         String platformName = "wyy".equals(platform) ? "网易云" : "QQ";
         source.sendSuccess(() -> Component.literal(
@@ -159,19 +127,15 @@ public class TSBotMod {
                 return;
             }
 
-            // 标题行
             source.sendSuccess(() -> Component.literal(
                     "§a[TSBot] §f" + platformName + "搜索结果（点击 §b[播放]§f 或 §e[入队]§f）："), false);
 
-            // 逐条构建可交互消息
             for (int i = 0; i < results.size(); i++) {
                 MusicSearchResult r = results.get(i);
                 int index = i + 1;
 
-                // 基本信息：[编号] 歌曲名 - 歌手
                 MutableComponent line = Component.literal("§7[" + index + "] §f" + r.getDisplayName() + " ");
 
-                // [播放] 按钮 - 点击直接播放（命令格式：/ts qq play <id> <歌名>）
                 MutableComponent playBtn = Component.literal("§b[播放]");
                 playBtn.setStyle(Style.EMPTY
                         .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
@@ -179,10 +143,8 @@ public class TSBotMod {
                         .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                                 Component.literal("§a点击立即播放：" + r.getDisplayName()))));
 
-                // 空格分隔
                 MutableComponent separator = Component.literal(" ");
 
-                // [入队] 按钮 - 点击加入队列（命令格式：/ts qq add <id> <歌名>）
                 MutableComponent addBtn = Component.literal("§e[入队]");
                 addBtn.setStyle(Style.EMPTY
                         .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
@@ -192,7 +154,6 @@ public class TSBotMod {
 
                 line.append(playBtn).append(separator).append(addBtn);
 
-                // 发送给执行搜索的玩家
                 source.sendSuccess(() -> line, false);
             }
         }).exceptionally(ex -> {
@@ -203,16 +164,10 @@ public class TSBotMod {
         });
     }
 
-    // ==================== 播放控制 ====================
-
-    /**
-     * 处理直接播放请求。
-     */
     private void handlePlay(CommandSourceStack source, String platform, String idAndName) {
         ServerPlayer player = source.getPlayer();
         MinecraftServer server = source.getServer();
 
-        // 从 "<id> <歌名>" 中拆出 ID 和显示名
         String songId;
         String displayName;
         int spaceIdx = idAndName.indexOf(' ');
@@ -236,14 +191,10 @@ public class TSBotMod {
                 });
     }
 
-    /**
-     * 处理添加到队列请求。
-     */
     private void handleAdd(CommandSourceStack source, String platform, String idAndName) {
         ServerPlayer player = source.getPlayer();
         MinecraftServer server = source.getServer();
 
-        // 从 "<id> <歌名>" 中拆出 ID 和显示名
         String songId;
         String displayName;
         int spaceIdx = idAndName.indexOf(' ');
@@ -267,9 +218,6 @@ public class TSBotMod {
                 });
     }
 
-    /**
-     * 处理切歌请求。
-     */
     private void handleNext(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         MinecraftServer server = source.getServer();
@@ -281,7 +229,6 @@ public class TSBotMod {
         CompletableFuture.runAsync(() -> {
             try {
                 ts3Client.sendBotCommand("!next");
-                // 全服广播
                 if (server != null) {
                     server.execute(() -> {
                         Component msg = Component.literal("§a[TSBot] §e" + playerName + " §f切了一首歌");
@@ -298,9 +245,6 @@ public class TSBotMod {
         });
     }
 
-    /**
-     * 处理暂停/继续请求。
-     */
     private void handlePause(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         MinecraftServer server = source.getServer();

@@ -10,30 +10,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/**
- * 从 config/tsbot-config.toml 加载配置。
- * 如果配置文件不存在，自动生成默认模板。
- */
 public class TSBotConfigLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger("TSBotConfigLoader");
     private static TSBotConfig cachedConfig;
 
-    /** 默认模板内容 */
     private static final String DEFAULT_CONFIG_TEMPLATE = """
             # TSBot 配置文件
             # 由 TSBotMod V2.0 自动生成，请根据你的环境修改下列参数。
 
             [General]
-            # TS3 语音服务器地址
             host = "localhost"
             port = 10011
             user = "serveradmin"
             password = "YOUR_SERVERQUERY_PASSWORD"
 
-            # 默认音乐源：wyy 或 qq
             default_source = "wyy"
 
-            # 音乐 API 地址
             netease_api = "http://localhost:3000"
             qq_api = "http://localhost:3300"
             """;
@@ -45,7 +37,6 @@ public class TSBotConfigLoader {
         return cachedConfig;
     }
 
-    /** 强制重新加载配置（用于热重载） */
     public static void reloadConfig() {
         cachedConfig = loadConfig();
     }
@@ -54,7 +45,6 @@ public class TSBotConfigLoader {
         TSBotConfig config = new TSBotConfig();
         Path configPath = FMLPaths.CONFIGDIR.get().resolve("tsbot-config.toml");
 
-        // ===== 配置文件不存在时自动生成 =====
         if (!Files.exists(configPath)) {
             LOGGER.warn("========================================");
             LOGGER.warn("[TSBot] 配置文件已生成！请前往 config/tsbot-config.toml 填写密码和 IP！");
@@ -69,12 +59,10 @@ public class TSBotConfigLoader {
             }
         }
 
-        // ===== 解析配置 =====
         try {
             List<String> lines = Files.readAllLines(configPath, StandardCharsets.UTF_8);
             for (String rawLine : lines) {
                 String line = rawLine.trim();
-                // 跳过空行、注释、TOML 段头 [xxx]
                 if (line.isEmpty() || line.startsWith("#") || line.startsWith("[")) {
                     continue;
                 }
@@ -84,7 +72,6 @@ public class TSBotConfigLoader {
                 }
                 String key = line.substring(0, idx).trim();
                 String value = line.substring(idx + 1).trim();
-                // 去掉引号
                 if (value.startsWith("\"") && value.endsWith("\"") && value.length() >= 2) {
                     value = value.substring(1, value.length() - 1);
                 }
@@ -107,16 +94,12 @@ public class TSBotConfigLoader {
                             config.defaultSource = "wyy";
                         }
                     }
-                    // 兼容新旧键名
                     case "netease_api", "netease_api_url" -> config.neteaseApiUrl = stripTrailingSlash(value);
                     case "qq_api", "qq_api_url" -> config.qqApiUrl = stripTrailingSlash(value);
-                    default -> {
-                        // ignore
-                    }
+                    default -> {}
                 }
             }
 
-            // ===== 空值保护 =====
             if (config.password == null || config.password.isEmpty()) {
                 LOGGER.warn("[TSBot] ⚠ password 为空！ServerQuery 登录将会失败，请在 tsbot-config.toml 中填写密码！");
             }
@@ -139,7 +122,6 @@ public class TSBotConfigLoader {
         return config;
     }
 
-    /** 清理 URL 尾部斜杠 */
     private static String stripTrailingSlash(String url) {
         if (url != null && url.endsWith("/")) {
             return url.substring(0, url.length() - 1);

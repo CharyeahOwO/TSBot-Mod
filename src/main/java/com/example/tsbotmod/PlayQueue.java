@@ -8,10 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 播放队列管理与全服广播。
- * 负责通过 TS3 ServerQuery 发送播放/入队指令，并向全服玩家广播通知。
- */
 public class PlayQueue {
     private static final Logger LOGGER = LoggerFactory.getLogger("PlayQueue");
     private final TS3QueryClient ts3Client;
@@ -20,16 +16,6 @@ public class PlayQueue {
         this.ts3Client = ts3Client;
     }
 
-    /**
-     * 直接播放歌曲（立即插入播放）。
-     * 映射为 !wyy play <id> 或 !qq play <id>
-     *
-     * @param server   MC 服务器实例（用于广播）
-     * @param player   触发的玩家（可能为 null）
-     * @param platform "wyy" 或 "qq"
-     * @param songId   歌曲 ID
-     * @param displayName 歌曲显示名（歌曲名 - 歌手），用于广播
-     */
     public CompletableFuture<Void> playSong(MinecraftServer server, ServerPlayer player,
                                              String platform, String songId, String displayName) {
         String botCommand = "!" + platform + " play " + songId;
@@ -47,16 +33,6 @@ public class PlayQueue {
         });
     }
 
-    /**
-     * 将歌曲加入播放队列。
-     * 映射为 !wyy add <id> 或 !qq add <id>
-     *
-     * @param server   MC 服务器实例（用于广播）
-     * @param player   触发的玩家（可能为 null）
-     * @param platform "wyy" 或 "qq"
-     * @param songId   歌曲 ID
-     * @param displayName 歌曲显示名（歌曲名 - 歌手），用于广播
-     */
     public CompletableFuture<Void> addToQueue(MinecraftServer server, ServerPlayer player,
                                                String platform, String songId, String displayName) {
         String botCommand = "!" + platform + " add " + songId;
@@ -74,9 +50,6 @@ public class PlayQueue {
         });
     }
 
-    /**
-     * 全服广播消息。
-     */
     private void broadcast(MinecraftServer server, String message) {
         if (server == null) return;
         server.execute(() -> {

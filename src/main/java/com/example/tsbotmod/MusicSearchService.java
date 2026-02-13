@@ -20,18 +20,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 异步音乐搜索服务，支持网易云和 QQ 音乐 API。
- */
 public class MusicSearchService {
     private static final Logger LOGGER = LoggerFactory.getLogger("MusicSearchService");
     private static final Gson GSON = new Gson();
     private static final int TIMEOUT_MS = 5000;
 
-    /**
-     * 搜索网易云音乐，返回前 5 条结果。
-     * API: GET {neteaseApiUrl}/search?keywords={keyword}&limit=5
-     */
     public CompletableFuture<List<MusicSearchResult>> searchNetease(String keyword) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -48,10 +41,6 @@ public class MusicSearchService {
         });
     }
 
-    /**
-     * 搜索 QQ 音乐，返回前 5 条结果。
-     * API: GET {qqApiUrl}/search?key={keyword}&pageSize=5
-     */
     public CompletableFuture<List<MusicSearchResult>> searchQQ(String keyword) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -68,9 +57,6 @@ public class MusicSearchService {
         });
     }
 
-    /**
-     * 发送 HTTP GET 请求，带超时和详细日志。
-     */
     private String httpGet(String urlStr) throws Exception {
         LOGGER.info("正在连接音乐 API: {}", urlStr);
 
@@ -108,9 +94,6 @@ public class MusicSearchService {
         }
     }
 
-    /**
-     * 移除 URL 尾部斜杠，防止拼接出 // 的情况。
-     */
     private String stripTrailingSlash(String url) {
         if (url != null && url.endsWith("/")) {
             return url.substring(0, url.length() - 1);
@@ -118,10 +101,6 @@ public class MusicSearchService {
         return url;
     }
 
-    /**
-     * 解析网易云 API 响应。
-     * 结构: { "result": { "songs": [ { "id": 123, "name": "xxx", "artists": [{ "name": "yyy" }] } ] } }
-     */
     private List<MusicSearchResult> parseNeteaseResults(String json) {
         List<MusicSearchResult> results = new ArrayList<>();
         try {
@@ -150,19 +129,13 @@ public class MusicSearchService {
         return results;
     }
 
-    /**
-     * 解析 QQ 音乐 API 响应。
-     * 结构: { "response": { "data": { "song": { "list": [ { "songmid": "xxx", "songname": "xxx", "singer": [{ "name": "yyy" }] } ] } } } }
-     */
     private List<MusicSearchResult> parseQQResults(String json) {
         List<MusicSearchResult> results = new ArrayList<>();
         try {
             JsonObject root = GSON.fromJson(json, JsonObject.class);
 
-            // 尝试多种可能的 JSON 结构
             JsonArray list = null;
 
-            // 结构 1: { "response": { "data": { "song": { "list": [...] } } } }
             if (root.has("response")) {
                 JsonObject response = root.getAsJsonObject("response");
                 if (response.has("data")) {
@@ -174,7 +147,6 @@ public class MusicSearchService {
                 }
             }
 
-            // 结构 2: { "data": { "song": { "list": [...] } } }
             if (list == null && root.has("data")) {
                 JsonObject data = root.getAsJsonObject("data");
                 if (data.has("song")) {
@@ -190,7 +162,6 @@ public class MusicSearchService {
             for (JsonElement el : list) {
                 JsonObject song = el.getAsJsonObject();
 
-                // ID 可能是 songmid 或 songid
                 String id;
                 if (song.has("songmid")) {
                     id = song.get("songmid").getAsString();

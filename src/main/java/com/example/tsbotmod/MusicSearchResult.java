@@ -1,8 +1,5 @@
 package com.example.tsbotmod;
 
-/**
- * 音乐搜索结果数据类。
- */
 public class MusicSearchResult {
     private final String id;
     private final String name;
@@ -26,7 +23,6 @@ public class MusicSearchResult {
         return artist;
     }
 
-    /** 格式化显示：歌曲名 - 歌手 */
     public String getDisplayName() {
         return name + " - " + artist;
     }
