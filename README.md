@@ -1,5 +1,7 @@
 # TSBot Mod — Minecraft × TeamSpeak 3 跨平台点歌联动
 
+> **English Version**: [README_EN.md](README_EN.md)
+
 <p align="center">
   <img src="https://img.shields.io/badge/Minecraft-1.20.1-brightgreen?style=flat-square&logo=minecraft" alt="Minecraft" />
   <img src="https://img.shields.io/badge/Forge-47.1.0-orange?style=flat-square" alt="Forge" />
