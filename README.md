@@ -207,6 +207,12 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 
 ---
 
+## 写在最后
+
+本项目仅用于学习交流，不涉及任何商业用途。若有任何问题或建议，请通过 [Issues](https://github.com/CharyeahOwO/TSBot-Mod/issues) 反馈
+如果项目火了，会考虑做一个正式的版本，包含Paper版本，和Fabric
+不过这么冷门应该不会火
+
 ## 📄 License
 
 All Rights Reserved. See [LICENSE.txt](LICENSE.txt).
