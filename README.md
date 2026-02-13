@@ -17,7 +17,7 @@
 | Minecraft 游戏内交互 (点歌/切歌) | TeamSpeak 3 机器人响应 |
 | :---: | :---: |
 | <img src="https://mulingowo.cn/wp-content/uploads/2026/02/1770944968-57a6a7bac80631ed953e246a6b09c1a9.png" alt="MC游戏内截图" width="100%"> | <img src="https://mulingowo.cn/wp-content/uploads/2026/02/1770944868-微信图片_20260213065629_124_59.png" alt="TS3客户端截图" width="100%"> |
-| *玩家在聊天栏搜索并点击播放，支持显示歌词* | *机器人同步播放音乐，显示封面与信息* |
+| *玩家在聊天栏搜索并点击播放* | *机器人同步播放音乐，显示封面与信息* |
 
 ## 🔔 核心前置依赖 (部署前必看)
 
