@@ -12,8 +12,6 @@ run/
 run-data/
 logs/
 
-# Secrets & Configs (用户需手动创建)
-# config/tsbot-config.toml 已提供模板，不排除
 
 # IDE
 *.iml
@@ -30,5 +28,5 @@ Thumbs.db
 *.log
 *.swp
 
-# Archives (不需要上传原始 MDK zip)
+
 *.zip
