@@ -133,8 +133,8 @@ password = "YOUR_PASSWORD"         # ⚠️ 注意：这是 Query 密码，非�
 default_source = "wyy"
 
 # 音乐 API 地址 (需包含 http:// 且不带尾斜杠)
-netease_api = "[http://127.0.0.1:3000](http://127.0.0.1:3000)"
-qq_api = "[http://127.0.0.1:3300](http://127.0.0.1:3300)"
+netease_api = "http://127.0.0.1:3000"
+qq_api = "http://127.0.0.1:3300"
 ```
 
 ### 3. 验证连接
@@ -153,7 +153,7 @@ qq_api = "[http://127.0.0.1:3300](http://127.0.0.1:3300)"
 环境要求：**JDK 17** (必须)
 
 ```bash
-git clone [https://github.com/CharyeahOwO/TSBot-Mod.git](https://github.com/CharyeahOwO/TSBot-Mod.git)
+git clone https://github.com/CharyeahOwO/TSBot-Mod.git
 cd TSBot-Mod
 # Linux / macOS
 JAVA_HOME=/path/to/jdk17 ./gradlew build
@@ -211,9 +211,8 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 
 ## 写在最后
 
-本项目仅用于学习交流，不涉及任何商业用途。若有任何问题或建议，请通过 [Issues](https://github.com/CharyeahOwO/TSBot-Mod/issues) 反馈
-如果项目火了，会考虑做一个正式的版本，包含Paper版本，和Fabric
-不过这么冷门应该不会火
+本项目仅用于学习交流，不涉及任何商业用途。若有任何问题或建议，请通过 [Issues](https://github.com/CharyeahOwO/TSBot-Mod/issues) 反馈。
+如果项目获得足够关注，会考虑开发正式版本，包括 Paper 和 Fabric 支持。
 
 ## 📄 License
 
