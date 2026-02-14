@@ -14,6 +14,23 @@
 ⚠️ **免责提醒**：本项目最初为满足作者个人服务器需求而开发，内部架构较为复杂且功能仍在迭代中。部分极端场景下可能存在 Bug，欢迎通过 Issues 提交反馈或 PR 协助完善。
 
 ---
+## 🧭 目录
+
+- [运行效果展示](#demo)
+- [核心前置依赖](#deps)
+- [项目背景与原理](#principle)
+- [技术架构与设计要点](#architecture)
+- [ServerQuery 协议与实现细节](#serverquery)
+- [功能特性](#features)
+- [部署指南](#deploy)
+- [从源码构建](#build)
+- [指令参考词典](#commands)
+- [常见排错指南](#troubleshooting)
+- [致谢](#thanks)
+- [License](#license)
+
+---
+<a id="demo"></a>
 ## 📸 运行效果展示
 
 | Minecraft 游戏内交互 (点歌/切歌) | TeamSpeak 3 机器人响应 |
@@ -21,6 +38,7 @@
 | <img src="https://mulingowo.cn/wp-content/uploads/2026/02/1770944968-57a6a7bac80631ed953e246a6b09c1a9.png" alt="MC游戏内截图" width="100%"> | <img src="https://mulingowo.cn/wp-content/uploads/2026/02/1770944868-微信图片_20260213065629_124_59.png" alt="TS3客户端截图" width="100%"> |
 | *玩家在聊天栏搜索并点击播放* | *机器人同步播放音乐，显示封面与信息* |
 
+<a id="deps"></a>
 ## 🔔 核心前置依赖 (部署前必看)
 
 > [!IMPORTANT]
@@ -43,6 +61,7 @@
 
 ---
 
+<a id="principle"></a>
 ## 💡 项目背景与原理
 
 许多硬核游戏社区习惯同时使用 Minecraft 服务器与 TeamSpeak 3 进行语音沟通。借助上述的 TS3 插件，频道本身已具备强大的点歌能力。
@@ -80,13 +99,14 @@ sequenceDiagram
 
 ---
 
+<a id="architecture"></a>
 ## 🏗️ 技术架构与设计要点
 
 ### 💡 核心设计亮点
 
 * **🚀 完全异步 (Non-blocking)**：这是本 Mod 最核心的性能保障。所有涉及调用音乐 API 的网络 I/O 操作，全部采用 `CompletableFuture` 异步执行，**绝不阻塞 Minecraft 主线程**，即使 API 响应慢也完全不会拉低服务器的 TPS。
 * **🔌 极简的控制流**：如上图所示，对于单纯的控制指令（如切歌、暂停），模组会直接通过 ServerQuery 与 TS3 通信，避免了多余的 API 请求开销。
-* **⚙️ TS3 协议深度兼容**：没有依赖臃肿的第三方库，而是从底层完整实现了 ServerQuery 的转义规则、Welcome Banner 消耗机制以及严格的键值对认证流程。
+* **⚙️ 轻量 ServerQuery 客户端实现**：没有依赖臃肿的第三方库，而是实现了 ServerQuery 的最小闭环（转义、Welcome Banner 消耗、登录、发送文本消息、断开连接），方便定位问题与二次扩展。
 * **🛡️ 健壮的容错机制**：针对连接超时、认证失败、API 宕机或空配置等异常场景，均做了完备的异常捕获，并会在游戏内给玩家明确的报错反馈。
 
 ### 模块概览
@@ -100,6 +120,61 @@ sequenceDiagram
 
 ---
 
+<a id="serverquery"></a>
+## 🧵 ServerQuery 协议与实现细节
+
+本节面向“想看清楚它到底怎么跟 TS3 说话”的服主/开发者，描述当前实现的真实行为与限制。
+
+### 连接生命周期（一次指令一次连接）
+
+当前实现是“每次发送指令都新建一次 TCP 连接”，并设置 **5 秒连接超时 + 5 秒读取超时**。单次指令的执行序列如下：
+
+1. 连接 `host:port`
+2. 消耗 Welcome Banner（逐行读取，最多 10 行）
+3. `login client_login_name=... client_login_password=...`（强校验 `error id=0`，否则判定认证失败）
+4. `use 1`（固定使用虚拟服务器 ID=1；失败只会记录告警）
+5. `sendtextmessage targetmode=3 msg=...`（把“机器人指令”当作文本消息发出去；失败只会记录告警）
+6. `quit`
+
+### 指令载荷（MC 指令 → 机器人指令）
+
+模组不会直接调用 TS3AudioBot 的 HTTP/Web API，而是把机器人能识别的原生命令拼成字符串，通过 `sendtextmessage` 发到 TS3：
+
+- 点歌：`!wyy play <songId>` / `!qq play <songId>`
+- 入队：`!wyy add <songId>` / `!qq add <songId>`
+- 控制：`!next`、`!pause`
+
+其中 `targetmode=3` 代表“服务器消息”。如果你的 Bot/插件只监听“频道消息”(targetmode=2) 或其它来源，可能会出现“指令发出但机器人无响应”的现象。
+
+### 转义规则（ts3Escape）
+
+为了符合 ServerQuery 参数编码规则，`login` 凭据与 `msg=` 载荷都会先做转义（常见替换如下）：
+
+| 原字符 | 转义后 |
+| :---: | :---: |
+| `\` | `\\` |
+| `/` | `\/` |
+| 空格 | `\s` |
+| `|` | `\p` |
+| `\n` | `\n` |
+| `\r` | `\r` |
+| `\t` | `\t` |
+
+### 响应解析策略（为什么有时“只看到 warn”）
+
+每条 ServerQuery 命令发送后，会持续读取返回行，直到遇到以 `error ` 开头的行作为“最终结果”（最多读取 20 行）。
+
+- `login`：必须 `error id=0`，否则直接判定认证失败并终止本次发送
+- `use 1` / `sendtextmessage`：非 `error id=0` 时只记录告警，不会抛异常中断
+
+### 已知限制（工程视角的边界）
+
+- 虚拟服务器固定为 `use 1`；如果你的 TS3 并非在 ID=1 的虚拟服务器上运行，当前实现可能会把消息发到错误的虚拟服里
+- 文本消息固定为 `targetmode=3`；若 Bot/插件不处理服务器消息，需要调整 Bot 侧配置或修改实现
+
+---
+
+<a id="features"></a>
 ## ✨ 功能特性
 
 * 🔍 **双源搜索**：支持网易云 / QQ 音乐关键词搜索，结果在 MC 聊天栏以交互式文本展示。
@@ -111,6 +186,7 @@ sequenceDiagram
 
 ---
 
+<a id="deploy"></a>
 ## 🚀 部署指南 (服主向)
 
 > **前置确认**：请确保已跑通上述【核心前置依赖】中的所有服务，并且**拥有 TS3 的 ServerQuery 权限**，再进行本模组的安装。
@@ -137,6 +213,11 @@ netease_api = "http://127.0.0.1:3000"
 qq_api = "http://127.0.0.1:3300"
 ```
 
+补充说明：
+
+- 当前 ServerQuery 的虚拟服务器固定为 `use 1`（虚拟服务器 ID=1）
+- 当前以服务器消息方式发送指令（`sendtextmessage targetmode=3`）
+
 ### 3. 验证连接
 保存配置后重启服务端，若控制台输出以下内容，则代表连接成功：
 ```log
@@ -148,6 +229,7 @@ qq_api = "http://127.0.0.1:3300"
 
 ---
 
+<a id="build"></a>
 ## 🛠️ 从源码构建 (开发者向)
 
 环境要求：**JDK 17** (必须)
@@ -167,6 +249,7 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 
 ---
 
+<a id="commands"></a>
 ## 📖 指令参考词典
 
 | 指令语法 | 功能说明 | 使用示例 |
@@ -182,6 +265,7 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 
 ---
 
+<a id="troubleshooting"></a>
 ## 🐛 常见排错指南
 
 * **Q: 为什么控制台报错无法连接到 ServerQuery 或连不上 10011 端口？**
@@ -190,11 +274,16 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
   * A: 配置文件里的 `password` 填错了。ServerQuery 密码是在 TS3 服务端**首次初始化**时生成在控制台的，如果你忘记了，可能需要重置 TS3 服务端的数据库或者使用相关脚本重新生成。
 * **Q: 搜索功能正常，点击播放没反应/没声音？**
   * A: 本 Mod 只负责发送指令。请检查你部署的 TS3AudioBot 以及 Netease-QQ 插件是否正常工作，机器人是否在你的频道里，以及机器人本身是否有播放权限。
+* **Q: 控制台显示“发送完成”，但机器人完全不响应？**
+  * A: 优先排查“消息投递链路”是否匹配：当前实现用 `sendtextmessage targetmode=3` 发送服务器消息，并固定 `use 1` 选择虚拟服务器。请确认你的 Bot/插件确实监听服务器消息，并且 TS3 运行在虚拟服务器 ID=1 上。
+* **Q: 我想看更底层的 TS3 返回行来定位问题，怎么做？**
+  * A: 将 `TS3QueryClient` 的日志级别调到 `DEBUG`，可以看到每条 ServerQuery 命令的逐行响应（包含最终的 `error id=...` 行），用于判断是认证、选服还是消息发送失败。
 * **Q: QQ 音乐搜索结果一直为空？**
   * A: 请检查你的 QQ 音乐 API 容器状态，可以在服务器后台用 `curl http://你的IP:3300/search?key=测试` 看看有没有 JSON 数据返回。
 
 ---
 
+<a id="thanks"></a>
 ## 🙏 致谢
 
 本项目的实现站在了巨人的肩膀上，特别感谢以下开源项目与社区：
@@ -216,4 +305,5 @@ gradlew build -Dorg.gradle.java.home="C:\path\to\jdk17"
 
 ## 📄 License
 
+<a id="license"></a>
 All Rights Reserved. See [LICENSE.txt](LICENSE.txt).

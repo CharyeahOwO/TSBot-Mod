@@ -1,5 +1,7 @@
 # TSBot Mod — Minecraft × TeamSpeak 3 Cross-Platform Music Integration
 
+> **中文版**: [README.md](README.md)
+
 <p align="center">
   <img src="https://img.shields.io/badge/Minecraft-1.20.1-brightgreen?style=flat-square&logo=minecraft" alt="Minecraft" />
   <img src="https://img.shields.io/badge/Forge-47.1.0-orange?style=flat-square" alt="Forge" />
@@ -12,6 +14,23 @@
 ⚠️ **Disclaimer**: This project was initially developed to meet the author's personal server needs. The internal architecture is relatively complex and features are still being iterated. There may be bugs in some extreme scenarios. Feedback via Issues or PRs to help improve the project is welcome.
 
 ---
+## 🧭 Table of Contents
+
+- [Demo](#demo)
+- [Core Prerequisites](#deps)
+- [Project Background and Principles](#principle)
+- [Technical Architecture and Design Highlights](#architecture)
+- [ServerQuery Protocol and Implementation Details](#serverquery)
+- [Features](#features)
+- [Deployment Guide](#deploy)
+- [Building from Source](#build)
+- [Command Reference](#commands)
+- [Troubleshooting Guide](#troubleshooting)
+- [Acknowledgments](#thanks)
+- [License](#license)
+
+---
+<a id="demo"></a>
 ## 📸 Demo
 
 | Minecraft In-Game Interaction (Request/Skip) | TeamSpeak 3 Bot Response |
@@ -19,6 +38,7 @@
 | <img src="https://mulingowo.cn/wp-content/uploads/2026/02/1770944968-57a6a7bac80631ed953e246a6b09c1a9.png" alt="MC In-Game Screenshot" width="100%"> | <img src="https://mulingowo.cn/wp-content/uploads/2026/02/1770944868-微信图片_20260213065629_124_59.png" alt="TS3 Client Screenshot" width="100%"> |
 | *Players search and click play in chat* | *Bot plays music synchronously, displaying cover and info* |
 
+<a id="deps"></a>
 ## 🔔 Core Prerequisites (Must Read Before Deployment)
 
 > [!IMPORTANT]
@@ -41,6 +61,7 @@ This mod strongly depends on TeamSpeak 3's **ServerQuery port (default 10011)** 
 
 ---
 
+<a id="principle"></a>
 ## 💡 Project Background and Principles
 
 Many hardcore gaming communities are accustomed to using both Minecraft servers and TeamSpeak 3 for voice communication. With the above TS3 plugin, channels already have powerful music request capabilities.
@@ -78,13 +99,14 @@ sequenceDiagram
 
 ---
 
+<a id="architecture"></a>
 ## 🏗️ Technical Architecture and Design Highlights
 
 ### 💡 Core Design Highlights
 
 * **🚀 Fully Asynchronous (Non-blocking)**: This is the most core performance guarantee of this Mod. All network I/O operations involving calls to music APIs are executed asynchronously using `CompletableFuture`, **absolutely never blocking the Minecraft main thread**. Even if the API responds slowly, it will not affect the server's TPS at all.
 * **🔌 Minimal Control Flow**: As shown in the diagram above, for simple control commands (such as skip, pause), the mod directly communicates with TS3 through ServerQuery, avoiding unnecessary API request overhead.
-* **⚙️ Deep TS3 Protocol Compatibility**: Instead of relying on bloated third-party libraries, it fully implements ServerQuery's escape rules, Welcome Banner consumption mechanism, and strict key-value pair authentication process from the bottom up.
+* **⚙️ Lightweight ServerQuery Client Implementation**: Instead of relying on bloated third-party libraries, it implements a minimal ServerQuery loop (escaping, Welcome Banner consumption, login, text-message send, disconnect) to keep behavior explicit and debuggable.
 * **🛡️ Robust Error Handling**: Complete exception handling for connection timeouts, authentication failures, API downtime, or empty configurations, with clear error feedback to players in-game.
 
 ### Module Overview
@@ -98,6 +120,61 @@ sequenceDiagram
 
 ---
 
+<a id="serverquery"></a>
+## 🧵 ServerQuery Protocol and Implementation Details
+
+This section is for server owners/developers who want to understand exactly how the mod talks to TeamSpeak 3, including current behavior and boundaries.
+
+### Connection Lifecycle (One Command, One Connection)
+
+The current implementation creates a new TCP connection for each send, with **5s connect timeout + 5s read timeout**. The per-command sequence is:
+
+1. Connect to `host:port`
+2. Consume the Welcome Banner (read line-by-line, up to 10 lines)
+3. `login client_login_name=... client_login_password=...` (hard-requires `error id=0`, otherwise treated as auth failure)
+4. `use 1` (fixed virtual server id=1; failures are logged as warnings)
+5. `sendtextmessage targetmode=3 msg=...` (sends the bot command as a text message; failures are logged as warnings)
+6. `quit`
+
+### Payload (MC Commands → Bot Commands)
+
+The mod does not call TS3AudioBot's HTTP/Web API. Instead, it constructs native commands the bot/plugin understands and sends them via `sendtextmessage`:
+
+- Request: `!wyy play <songId>` / `!qq play <songId>`
+- Enqueue: `!wyy add <songId>` / `!qq add <songId>`
+- Control: `!next`, `!pause`
+
+`targetmode=3` means a server message. If your bot/plugin only listens to channel messages (`targetmode=2`) or other sources, you may see "sent" logs but no bot reaction.
+
+### Escaping Rules (ts3Escape)
+
+To comply with ServerQuery parameter encoding, both login credentials and the `msg=` payload are escaped first (common substitutions below):
+
+| Raw | Escaped |
+| :---: | :---: |
+| `\` | `\\` |
+| `/` | `\/` |
+| space | `\s` |
+| `|` | `\p` |
+| `\n` | `\n` |
+| `\r` | `\r` |
+| `\t` | `\t` |
+
+### Response Parsing Strategy
+
+For each ServerQuery command, the client reads lines until it encounters a line starting with `error ` and treats it as the final result (up to 20 lines).
+
+- `login`: must be `error id=0`, otherwise the send is aborted as authentication failure
+- `use 1` / `sendtextmessage`: non-zero `error id` is logged as a warning and does not throw
+
+### Known Boundaries
+
+- Virtual server is hardcoded as `use 1`; if your TS3 instance uses a different virtual server id, the message may go to the wrong instance
+- Message delivery is hardcoded as `targetmode=3`; if your bot/plugin does not process server messages, you may need to adjust bot-side settings or modify the implementation
+
+---
+
+<a id="features"></a>
 ## ✨ Features
 
 * 🔍 **Dual-Source Search**: Supports NetEase Cloud Music / QQ Music keyword search, results displayed as interactive text in MC chat.
@@ -109,6 +186,7 @@ sequenceDiagram
 
 ---
 
+<a id="deploy"></a>
 ## 🚀 Deployment Guide (For Server Owners)
 
 > **Prerequisites**: Please ensure all services in the above [Core Prerequisites] are running, and **you have TS3 ServerQuery permissions**, before installing this mod.
@@ -135,6 +213,11 @@ netease_api = "http://127.0.0.1:3000"
 qq_api = "http://127.0.0.1:3300"
 ```
 
+Notes:
+
+- ServerQuery virtual server is currently fixed as `use 1` (virtual server id=1)
+- Bot commands are currently delivered via server messages (`sendtextmessage targetmode=3`)
+
 ### 3. Verify Connection
 After saving the configuration, restart the server. If the console outputs the following content, it means the connection is successful:
 ```log
@@ -146,6 +229,7 @@ After saving the configuration, restart the server. If the console outputs the f
 
 ---
 
+<a id="build"></a>
 ## 🛠️ Building from Source (For Developers)
 
 Environment Requirements: **JDK 17** (Required)
@@ -165,6 +249,7 @@ Build artifacts are located in the `build/libs/` directory.
 
 ---
 
+<a id="commands"></a>
 ## 📖 Command Reference
 
 | Command Syntax | Function | Usage Example |
@@ -180,6 +265,7 @@ Build artifacts are located in the `build/libs/` directory.
 
 ---
 
+<a id="troubleshooting"></a>
 ## 🐛 Troubleshooting Guide
 
 * **Q: Why does the console report an error unable to connect to ServerQuery or port 10011?**
@@ -188,11 +274,16 @@ Build artifacts are located in the `build/libs/` directory.
   * A: The `password` in the configuration file is incorrect. The ServerQuery password is generated in the console when the TS3 server is **first initialized**. If you forgot it, you may need to reset the TS3 server database or use related scripts to regenerate it.
 * **Q: Search works fine, but clicking play has no response/no sound?**
   * A: This Mod only sends commands. Please check if your deployed TS3AudioBot and Netease-QQ plugin are working normally, if the bot is in your channel, and if the bot itself has playback permissions.
+* **Q: The console says "sent", but the bot never reacts at all. Why?**
+  * A: Check whether your message delivery chain matches your bot setup. The current implementation sends `sendtextmessage targetmode=3` (server messages) and uses `use 1` (virtual server id=1). Make sure your bot/plugin listens to server messages and your TS3 runs on id=1.
+* **Q: How can I see low-level TS3 responses to locate the failure stage?**
+  * A: Set the logger level for `TS3QueryClient` to `DEBUG`. It prints line-by-line ServerQuery responses, including the final `error id=...` line, which helps determine whether the failure is at auth, server selection, or message sending.
 * **Q: QQ Music search results are always empty?**
   * A: Please check your QQ Music API container status. You can use `curl http://your-IP:3300/search?key=test` in the server background to see if there is JSON data returned.
 
 ---
 
+<a id="thanks"></a>
 ## 🙏 Acknowledgments
 
 This project stands on the shoulders of giants. Special thanks to the following open-source projects and communities:
@@ -215,5 +306,5 @@ However, it's so niche that it probably won't become popular
 
 ## 📄 License
 
+<a id="license"></a>
 All Rights Reserved. See [LICENSE.txt](LICENSE.txt).
-
