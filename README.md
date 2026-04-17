@@ -1,5 +1,5 @@
 # TSBot Mod — Minecraft × TeamSpeak 3 跨平台点歌联动
-
+**该项目因QQ音乐API变动导致QQ音乐无法使用，网易云正常**
 > **English Version**: [README_EN.md](README_EN.md)
 
 <p align="center">
